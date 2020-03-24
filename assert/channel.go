@@ -1,0 +1,35 @@
+package assert
+
+import (
+	"github.com/stretchr/testify/assert"
+	"sync"
+	"testing"
+	"time"
+)
+
+const assertionTimeout = 100*time.Millisecond
+
+func ChannelReceives(t *testing.T, ch <-chan interface{}, expected interface{}) func() bool {
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	result := true
+
+	go func() {
+		select {
+			case v := <-ch:
+				result = result && assert.Equal(t, v, expected)
+			case <-time.After(assertionTimeout):
+				assert.Fail(t, "Channel recieved nothing", "Expected:", expected)
+				result = false
+		}
+		wg.Done()
+	}()
+
+	return func() bool {
+		wg.Wait()
+		return result
+	}
+}
+
