@@ -9,7 +9,11 @@ import (
 
 const assertionTimeout = 100*time.Millisecond
 
-func ChannelReceives(t *testing.T, ch <-chan interface{}, expected interface{}) func() bool {
+func ChannelReceivesOnce(
+	t *testing.T,
+	ch <-chan interface{},
+	expected interface{},
+) func() bool {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -33,3 +37,34 @@ func ChannelReceives(t *testing.T, ch <-chan interface{}, expected interface{}) 
 	}
 }
 
+func ChannelReceives(
+	t *testing.T,
+	ch <-chan interface{},
+	expected []interface{},
+) func() bool {
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	var result bool
+
+	go func() {
+
+		recieved := make([]interface{}, 0)
+		for {
+			select {
+				case v := <-ch:
+					recieved = append(recieved, v)
+				case <-time.After(200*time.Millisecond):
+					result = assert.Equal(t, recieved, expected)
+					wg.Done()
+					return
+			}
+		}
+	}()
+
+	return func() bool {
+		wg.Wait()
+		return result
+	}
+}
