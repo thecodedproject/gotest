@@ -159,6 +159,92 @@ func TestLogicallyEqual(t *testing.T) {
 			},
 			pass: false,
 		},
+		{
+			name: "map inside struct when equal",
+			a: struct{
+				M map[string]decimal.Decimal
+			}{
+				M: map[string]decimal.Decimal{
+					"one": decimal.NewFromFloat(2),
+					"two": decimal.Decimal{},
+				},
+			},
+			b: struct{
+				M map[string]decimal.Decimal
+			}{
+				M: map[string]decimal.Decimal{
+					"one": decimal.NewFromFloat(20).Div(decimal.NewFromFloat(10)),
+					"two": decimal.NewFromFloat(0),
+				},
+			},
+			pass: true,
+		},
+		{
+			name: "map inside struct when not equal",
+			a: struct{
+				M map[string]decimal.Decimal
+			}{
+				M: map[string]decimal.Decimal{
+					"one": decimal.NewFromFloat(2),
+					"two": decimal.Decimal{},
+				},
+			},
+			b: struct{
+				M map[string]decimal.Decimal
+			}{
+				M: map[string]decimal.Decimal{
+					"one": decimal.NewFromFloat(10).Div(decimal.NewFromFloat(10)),
+					"two": decimal.NewFromFloat(0),
+				},
+			},
+			pass: false,
+		},
+		{
+			name: "slice of decimals when equal",
+			a: []decimal.Decimal{
+				decimal.NewFromFloat(2),
+				decimal.NewFromFloat(0),
+			},
+			b: []decimal.Decimal{
+				decimal.NewFromFloat(20).Div(decimal.NewFromFloat(10)),
+				decimal.Decimal{},
+			},
+			pass: true,
+		},
+		{
+			name: "slice of decimals when not equal",
+			a: []decimal.Decimal{
+				decimal.NewFromFloat(2),
+				decimal.NewFromFloat(0),
+			},
+			b: []decimal.Decimal{
+				decimal.NewFromFloat(30).Div(decimal.NewFromFloat(10)),
+				decimal.Decimal{},
+			},
+			pass: false,
+		},
+		{
+			name: "slice with different lengths - a contains more than b",
+			a: []decimal.Decimal{
+				decimal.NewFromFloat(2),
+				decimal.NewFromFloat(0),
+			},
+			b: []decimal.Decimal{
+				decimal.NewFromFloat(20).Div(decimal.NewFromFloat(10)),
+			},
+			pass: false,
+		},
+		{
+			name: "slice with different lengths - b contains more than a",
+			a: []decimal.Decimal{
+				decimal.NewFromFloat(0),
+			},
+			b: []decimal.Decimal{
+				decimal.NewFromFloat(20).Div(decimal.NewFromFloat(10)),
+				decimal.Decimal{},
+			},
+			pass: false,
+		},
 	}
 
 	for _, test := range testCases {

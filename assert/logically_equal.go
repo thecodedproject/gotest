@@ -9,7 +9,6 @@ import (
 	"sort"
 )
 
-// TODO Add support for comparing pointers and arrays
 func LogicallyEqual(t *testing.T, a, b interface{}, s ...interface{}) bool {
 
 	if a == nil || b == nil {
@@ -36,6 +35,8 @@ func LogicallyEqual(t *testing.T, a, b interface{}, s ...interface{}) bool {
 		return structsLogicallyEqual(t, a, b, s...)
 	case reflect.Map:
 		return mapsLogicallyEqual(t, a, b, s...)
+	case reflect.Slice:
+		return slicesLogicallyEqual(t, a, b, s...)
 	default:
 		return assert.Equal(t, a, b, s...)
 	}
@@ -105,6 +106,42 @@ func mapsLogicallyEqual(
 			t,
 			aValue.MapIndex(key).Interface(),
 			bValue.MapIndex(key).Interface(),
+			messageAndFieldName...,
+		)
+	}
+
+	return retval
+}
+
+func slicesLogicallyEqual(
+	t *testing.T,
+	a interface{},
+	b interface{},
+	s ...interface{},
+) bool {
+
+	aValue := reflect.ValueOf(a)
+	bValue := reflect.ValueOf(b)
+
+	keysMsg := append([]interface{}{"Length of slice"}, s...)
+	ok := assert.Equal(
+		t,
+		aValue.Len(),
+		bValue.Len(),
+		keysMsg...,
+	)
+	if !ok {
+		return false
+	}
+
+	retval := true
+	for i:=0; i<aValue.Len(); i++ {
+		messageAndFieldName := append(s, fmt.Sprintf(".[%d]", i))
+
+		retval = retval && LogicallyEqual(
+			t,
+			aValue.Index(i).Interface(),
+			bValue.Index(i).Interface(),
 			messageAndFieldName...,
 		)
 	}
