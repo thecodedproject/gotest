@@ -59,6 +59,10 @@ func ptrsLogicallyEqual(
 	aValue := reflect.ValueOf(a)
 	bValue := reflect.ValueOf(b)
 
+	if aValue.IsZero() || bValue.IsZero() {
+		return assert.Equal(t, a, b, s...)
+	}
+
 	return LogicallyEqual(
 		t,
 		aValue.Elem().Interface(),

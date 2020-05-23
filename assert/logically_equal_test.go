@@ -355,6 +355,74 @@ func TestLogicallyEqualWithPtrs(t *testing.T) {
 			pass: false,
 		},
 		{
+			name: "shopspring decimals inside struct not equal with one being zero value",
+			aCtr: func() interface{} {
+				i := decimal.NewFromFloat(2.0)
+				return struct{
+					Field *decimal.Decimal
+				}{
+					Field: &i,
+				}
+			},
+			bCtr: func() interface{} {
+				return struct{
+					Field *decimal.Decimal
+				}{}
+			},
+			pass: false,
+		},
+		{
+			name: "shopspring decimals inside struct when both structs are zero value",
+			aCtr: func() interface{} {
+				return struct{
+					Field *decimal.Decimal
+				}{}
+			},
+			bCtr: func() interface{} {
+				return struct{
+					Field *decimal.Decimal
+				}{}
+			},
+			pass: true,
+		},
+		{
+			name: "shopspring decimals inside struct not equal with one being nil",
+			aCtr: func() interface{} {
+				i := decimal.NewFromFloat(2.0)
+				return struct{
+					Field *decimal.Decimal
+				}{
+					Field: &i,
+				}
+			},
+			bCtr: func() interface{} {
+				return struct{
+					Field *decimal.Decimal
+				}{
+					Field: nil,
+				}
+			},
+			pass: false,
+		},
+		{
+			name: "shopspring decimals inside struct equal with both being nil",
+			aCtr: func() interface{} {
+				return struct{
+					Field *decimal.Decimal
+				}{
+					Field: nil,
+				}
+			},
+			bCtr: func() interface{} {
+				return struct{
+					Field *decimal.Decimal
+				}{
+					Field: nil,
+				}
+			},
+			pass: true,
+		},
+		{
 			name: "map of decimals when equal",
 			aCtr: func() interface{} {
 				one := decimal.NewFromFloat(2.0)
