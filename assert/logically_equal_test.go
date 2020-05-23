@@ -256,3 +256,242 @@ func TestLogicallyEqual(t *testing.T) {
 		})
 	}
 }
+
+func TestLogicallyEqualWithPtrs(t *testing.T) {
+
+	testCases := []struct{
+		name string
+		aCtr func() interface{}
+		bCtr func() interface{}
+		s []interface{}
+		pass bool
+	}{
+		{
+			name: "integers equal",
+			aCtr: func() interface{} {
+				i := 1
+				return &i
+			},
+			bCtr: func() interface{} {
+				i := 1
+				return &i
+			},
+			pass: true,
+		},
+		{
+			name: "integers not equal",
+			aCtr: func() interface{} {
+				i := 1
+				return &i
+			},
+			bCtr: func() interface{} {
+				i := 2
+				return &i
+			},
+			pass: false,
+		},
+		{
+			name: "shopspring decimals equal",
+			aCtr: func() interface{} {
+				i := decimal.NewFromFloat(2.0)
+				return &i
+			},
+			bCtr: func() interface{} {
+				i := decimal.NewFromFloat(20).Div(decimal.NewFromFloat(10))
+				return &i
+			},
+			pass: true,
+		},
+		{
+			name: "shopspring decimals not equal",
+			aCtr: func() interface{} {
+				i := decimal.NewFromFloat(2.0)
+				return &i
+			},
+			bCtr: func() interface{} {
+				i := decimal.NewFromFloat(30).Div(decimal.NewFromFloat(10))
+				return &i
+			},
+			pass: false,
+		},
+		{
+			name: "shopspring decimals inside struct equal",
+			aCtr: func() interface{} {
+				i := decimal.NewFromFloat(2.0)
+				return struct{
+					Field *decimal.Decimal
+				}{
+					Field: &i,
+				}
+			},
+			bCtr: func() interface{} {
+				i := decimal.NewFromFloat(20).Div(decimal.NewFromFloat(10))
+				return struct{
+					Field *decimal.Decimal
+				}{
+					Field: &i,
+				}
+			},
+			pass: true,
+		},
+		{
+			name: "shopspring decimals inside struct not equal",
+			aCtr: func() interface{} {
+				i := decimal.NewFromFloat(2.0)
+				return struct{
+					Field *decimal.Decimal
+				}{
+					Field: &i,
+				}
+			},
+			bCtr: func() interface{} {
+				i := decimal.NewFromFloat(30).Div(decimal.NewFromFloat(10))
+				return struct{
+					Field *decimal.Decimal
+				}{
+					Field: &i,
+				}
+			},
+			pass: false,
+		},
+		{
+			name: "map of decimals when equal",
+			aCtr: func() interface{} {
+				one := decimal.NewFromFloat(2.0)
+				two := decimal.NewFromFloat(0)
+				return map[string]*decimal.Decimal{
+					"one": &one,
+					"two": &two,
+				}
+			},
+			bCtr: func() interface{} {
+				one := decimal.NewFromFloat(20).Div(decimal.NewFromFloat(10))
+				two := decimal.Decimal{}
+				return map[string]*decimal.Decimal{
+					"one": &one,
+					"two": &two,
+				}
+			},
+			pass: true,
+		},
+		{
+			name: "map of decimals when not equal",
+			aCtr: func() interface{} {
+				one := decimal.NewFromFloat(2.0)
+				two := decimal.NewFromFloat(0)
+				return map[string]*decimal.Decimal{
+					"one": &one,
+					"two": &two,
+				}
+			},
+			bCtr: func() interface{} {
+				one := decimal.NewFromFloat(30).Div(decimal.NewFromFloat(10))
+				two := decimal.Decimal{}
+				return map[string]*decimal.Decimal{
+					"one": &one,
+					"two": &two,
+				}
+			},
+			pass: false,
+		},
+		{
+			name: "map inside struct when equal",
+			aCtr: func() interface{} {
+				one := decimal.NewFromFloat(2.0)
+				two := decimal.NewFromFloat(0)
+				m := map[string]*decimal.Decimal{
+					"one": &one,
+					"two": &two,
+				}
+				return struct {
+					M *map[string]*decimal.Decimal
+				}{
+					M: &m,
+				}
+			},
+			bCtr: func() interface{} {
+				one := decimal.NewFromFloat(20).Div(decimal.NewFromFloat(10))
+				two := decimal.Decimal{}
+				m := map[string]*decimal.Decimal{
+					"one": &one,
+					"two": &two,
+				}
+				return struct {
+					M *map[string]*decimal.Decimal
+				}{
+					M: &m,
+				}
+			},
+			pass: true,
+		},
+		{
+			name: "map inside struct when not equal",
+			aCtr: func() interface{} {
+				one := decimal.NewFromFloat(2.0)
+				two := decimal.NewFromFloat(0)
+				m := map[string]*decimal.Decimal{
+					"one": &one,
+					"two": &two,
+				}
+				return struct {
+					M *map[string]*decimal.Decimal
+				}{
+					M: &m,
+				}
+			},
+			bCtr: func() interface{} {
+				one := decimal.NewFromFloat(40).Div(decimal.NewFromFloat(10))
+				two := decimal.Decimal{}
+				m := map[string]*decimal.Decimal{
+					"one": &one,
+					"two": &two,
+				}
+				return struct {
+					M *map[string]*decimal.Decimal
+				}{
+					M: &m,
+				}
+			},
+			pass: false,
+		},
+		{
+			name: "slice of decimals when equal",
+			aCtr: func() interface{} {
+				one := decimal.NewFromFloat(2.0)
+				two := decimal.NewFromFloat(0)
+				return []*decimal.Decimal{&one, &two}
+			},
+			bCtr: func() interface{} {
+				one := decimal.NewFromFloat(20).Div(decimal.NewFromFloat(10))
+				two := decimal.Decimal{}
+				return []*decimal.Decimal{&one, &two}
+			},
+			pass: true,
+		},
+		{
+			name: "slice of decimals when not equal",
+			aCtr: func() interface{} {
+				one := decimal.NewFromFloat(2.0)
+				two := decimal.NewFromFloat(0)
+				return []*decimal.Decimal{&one, &two}
+			},
+			bCtr: func() interface{} {
+				one := decimal.NewFromFloat(30).Div(decimal.NewFromFloat(10))
+				two := decimal.Decimal{}
+				return []*decimal.Decimal{&one, &two}
+			},
+			pass: false,
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+
+			var fakeT testing.T
+			a := test.aCtr()
+			b := test.bCtr()
+			res := assert.LogicallyEqual(&fakeT, a, b, test.s...)
+			tfyassert.Equal(t, test.pass, res)
+		})
+	}
+}

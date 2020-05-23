@@ -31,6 +31,8 @@ func LogicallyEqual(t *testing.T, a, b interface{}, s ...interface{}) bool {
 	}
 
 	switch aType.Kind() {
+	case reflect.Ptr:
+		return ptrsLogicallyEqual(t, a, b, s...)
 	case reflect.Struct:
 		return structsLogicallyEqual(t, a, b, s...)
 	case reflect.Map:
@@ -45,6 +47,24 @@ func LogicallyEqual(t *testing.T, a, b interface{}, s ...interface{}) bool {
 func isShopspringDecimal(t reflect.Type) bool {
 
 	return t.PkgPath() == "github.com/shopspring/decimal" && t.Name() == "Decimal"
+}
+
+func ptrsLogicallyEqual(
+	t *testing.T,
+	a interface{},
+	b interface{},
+	s ...interface{},
+) bool {
+
+	aValue := reflect.ValueOf(a)
+	bValue := reflect.ValueOf(b)
+
+	return LogicallyEqual(
+		t,
+		aValue.Elem().Interface(),
+		bValue.Elem().Interface(),
+		s...,
+	)
 }
 
 func structsLogicallyEqual(
