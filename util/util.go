@@ -10,5 +10,5 @@ func D(v float64) decimal.Decimal {
 }
 
 func On(funcName string, args ...interface{}) *mock.Call {
-	return new(mock.Mock).On(funcName, args)
+	return new(mock.Mock).On(funcName, args...)
 }
