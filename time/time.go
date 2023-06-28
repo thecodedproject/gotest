@@ -12,18 +12,22 @@ func Now() gotime.Time {
 	return nowFunc()
 }
 
-func SetTimeNowFuncForTesting(_ *testing.T, now func() gotime.Time) func() {
+func SetTimeNowFuncForTesting(t *testing.T, now func() gotime.Time) {
 
 	oldNowFunc := nowFunc
 	nowFunc = now
-	return func() {
+	t.Cleanup(func() {
 		nowFunc = oldNowFunc
-	}
+	})
 }
 
-func SetTimeNowForTesting(t *testing.T, time gotime.Time) func() {
+func SetTimeNowForTesting(t *testing.T) (now gotime.Time) {
 
-	return SetTimeNowFuncForTesting(t, func() gotime.Time {
-		return time
+	now = gotime.Now()
+
+	SetTimeNowFuncForTesting(t, func() gotime.Time {
+		return now
 	})
+
+	return now
 }

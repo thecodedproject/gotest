@@ -7,35 +7,22 @@ import (
 	"time"
 )
 
-func TestSetTimeNowFuncAndReset(t *testing.T) {
+func TestSetTimeNowFunc(t *testing.T) {
 
 	someTime := time.Date(2009, 11, 17, 20, 34, 58, 651387237, time.UTC)
-	reset := testtime.SetTimeNowFuncForTesting(t, func() time.Time {
+	testtime.SetTimeNowFuncForTesting(t, func() time.Time {
 		return someTime
 	})
 	assert.Equal(t, someTime, testtime.Now())
 	assert.Equal(t, someTime, testtime.Now())
-
-	reset()
-
-	now := testtime.Now()
-	diff := time.Now().Sub(now)
-	assert.True(t, diff < 5*time.Millisecond)
 }
 
-func TestSetTimeNowValueAndReset(t *testing.T) {
+func TestSetTimeNowValue(t *testing.T) {
 
-	someTime := time.Date(2009, 11, 17, 20, 34, 58, 651387237, time.UTC)
-	reset := testtime.SetTimeNowForTesting(t, someTime)
+	now := testtime.SetTimeNowForTesting(t)
 
-	assert.Equal(t, someTime, testtime.Now())
-	assert.Equal(t, someTime, testtime.Now())
-
-	reset()
-
-	now := testtime.Now()
-	diff := time.Now().Sub(now)
-	assert.True(t, diff < 5*time.Millisecond)
+	assert.Equal(t, now, testtime.Now())
+	assert.Equal(t, now, testtime.Now())
 }
 
 func TestTimeNowWithoutMocking(t *testing.T) {
