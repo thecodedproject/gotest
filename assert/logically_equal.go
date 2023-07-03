@@ -2,7 +2,6 @@ package assert
 
 import (
 	"fmt"
-	"github.com/shopspring/decimal"
   "github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
@@ -22,12 +21,29 @@ func LogicallyEqual(t *testing.T, a, b interface{}, s ...interface{}) bool {
 		return assert.Equal(t, a, b, s...)
 	}
 
-	if isShopspringDecimal(aType) {
-
+	if res, ok := maybeCallCmp(a, b); ok {
 		message := fmt.Sprint(s...)
-		return assert.Equalf(t, 0, a.(decimal.Decimal).Cmp(b.(decimal.Decimal)),
-			"%s: Decimals not equal.\n\tExpected: %s\n\tActual: %s", message, a, b)
+		return assert.Equal(
+			t,
+			int64(0),
+			res,
+			"%s: Not equal (Cmp method).\n\tExpected: %s\n\tActual: %s",
+			message,
+			a,
+			b,
+		)
+	}
 
+	if res, ok := maybeCallEqual(a, b); ok {
+		message := fmt.Sprint(s...)
+		return assert.True(
+			t,
+			res,
+			"%s: Not equal (Equal method).\n\tExpected: %s\n\tActual: %s",
+			message,
+			a,
+			b,
+		)
 	}
 
 	switch aType.Kind() {
@@ -44,9 +60,54 @@ func LogicallyEqual(t *testing.T, a, b interface{}, s ...interface{}) bool {
 	}
 }
 
-func isShopspringDecimal(t reflect.Type) bool {
+// maybeCallCmp performs a runtime reflection to see if the type `a` has the
+// method `Cmp(rhs TypeOf(b)) int` and calls it if it exists.
+func maybeCallCmp(a, b any) (cmpResult int64, hasCmp bool) {
 
-	return t.PkgPath() == "github.com/shopspring/decimal" && t.Name() == "Decimal"
+	eq := reflect.ValueOf(a).MethodByName("Cmp")
+
+	if !eq.IsValid() {
+		return 0, false
+	}
+
+	if eq.Type().NumIn() != 1 || eq.Type().NumOut() != 1 {
+		return 0, false
+	}
+
+	if eq.Type().In(0) != reflect.TypeOf(b) || eq.Type().Out(0) != reflect.TypeOf(int(0)) {
+		return 0, false
+	}
+
+	res := eq.Call([]reflect.Value{
+		reflect.ValueOf(b),
+	})
+
+	return res[0].Int(), true
+}
+
+// maybeCallEqual performs a runtime reflection to see if the type `a` has the
+// method `Equal(rhs TypeOf(b)) bool` and calls it if it exists.
+func maybeCallEqual(a, b any) (eqResult bool, hasCmp bool) {
+
+	eq := reflect.ValueOf(a).MethodByName("Equal")
+
+	if !eq.IsValid() {
+		return false, false
+	}
+
+	if eq.Type().NumIn() != 1 || eq.Type().NumOut() != 1 {
+		return false, false
+	}
+
+	if eq.Type().In(0) != reflect.TypeOf(b) || eq.Type().Out(0) != reflect.TypeOf(false) {
+		return false, false
+	}
+
+	res := eq.Call([]reflect.Value{
+		reflect.ValueOf(b),
+	})
+
+	return res[0].Bool(), true
 }
 
 func ptrsLogicallyEqual(
