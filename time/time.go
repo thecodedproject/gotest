@@ -5,6 +5,15 @@ import (
 	gotime "time"
 )
 
+const (
+	Nanosecond  = gotime.Nanosecond
+	Microsecond = gotime.Microsecond
+	Millisecond = gotime.Millisecond
+	Second = gotime.Second
+	Minute = gotime.Minute
+	Hour = gotime.Hour
+)
+
 var nowFunc = gotime.Now
 
 func Now() gotime.Time {
