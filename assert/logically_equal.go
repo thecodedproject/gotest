@@ -8,7 +8,12 @@ import (
 	"sort"
 )
 
-func LogicallyEqual(t *testing.T, a, b interface{}, s ...interface{}) bool {
+func LogicallyEqual(
+	t *testing.T,
+	a any,
+	b any,
+	s ...any,
+) bool {
 
 	if a == nil || b == nil {
 		return assert.Equal(t, a, b, s...)
@@ -21,32 +26,36 @@ func LogicallyEqual(t *testing.T, a, b interface{}, s ...interface{}) bool {
 		return assert.Equal(t, a, b, s...)
 	}
 
+	if !valuesLogicallyEqual(
+		t,
+		reflect.ValueOf(a),
+		reflect.ValueOf(b),
+		s...,
+	) {
+		return assert.Equal(t, a, b, s...)
+	}
+
+	return true
+}
+
+func valuesLogicallyEqual(
+	t *testing.T,
+	a reflect.Value,
+	b reflect.Value,
+	s ...any,
+) bool {
+
 	if res, ok := maybeCallCmp(a, b); ok {
-		message := fmt.Sprint(s...)
-		return assert.Equal(
-			t,
-			int64(0),
-			res,
-			"%s: Not equal (Cmp method).\n\tExpected: %s\n\tActual: %s",
-			message,
-			a,
-			b,
-		)
+		//message := fmt.Sprint(s...)
+		return res==0
 	}
 
 	if res, ok := maybeCallEqual(a, b); ok {
-		message := fmt.Sprint(s...)
-		return assert.True(
-			t,
-			res,
-			"%s: Not equal (Equal method).\n\tExpected: %s\n\tActual: %s",
-			message,
-			a,
-			b,
-		)
+		//message := fmt.Sprint(s...)
+		return res
 	}
 
-	switch aType.Kind() {
+	switch a.Kind() {
 	case reflect.Ptr:
 		return ptrsLogicallyEqual(t, a, b, s...)
 	case reflect.Struct:
@@ -62,9 +71,9 @@ func LogicallyEqual(t *testing.T, a, b interface{}, s ...interface{}) bool {
 
 // maybeCallCmp performs a runtime reflection to see if the type `a` has the
 // method `Cmp(rhs TypeOf(b)) int` and calls it if it exists.
-func maybeCallCmp(a, b any) (cmpResult int64, hasCmp bool) {
+func maybeCallCmp(a, b reflect.Value) (cmpResult int64, hasCmp bool) {
 
-	eq := reflect.ValueOf(a).MethodByName("Cmp")
+	eq := a.MethodByName("Cmp")
 
 	if !eq.IsValid() {
 		return 0, false
@@ -74,12 +83,12 @@ func maybeCallCmp(a, b any) (cmpResult int64, hasCmp bool) {
 		return 0, false
 	}
 
-	if eq.Type().In(0) != reflect.TypeOf(b) || eq.Type().Out(0) != reflect.TypeOf(int(0)) {
+	if eq.Type().In(0) != b.Type() || eq.Type().Out(0) != reflect.TypeOf(int(0)) {
 		return 0, false
 	}
 
 	res := eq.Call([]reflect.Value{
-		reflect.ValueOf(b),
+		b,
 	})
 
 	return res[0].Int(), true
@@ -87,9 +96,9 @@ func maybeCallCmp(a, b any) (cmpResult int64, hasCmp bool) {
 
 // maybeCallEqual performs a runtime reflection to see if the type `a` has the
 // method `Equal(rhs TypeOf(b)) bool` and calls it if it exists.
-func maybeCallEqual(a, b any) (eqResult bool, hasCmp bool) {
+func maybeCallEqual(a, b reflect.Value) (eqResult bool, hasCmp bool) {
 
-	eq := reflect.ValueOf(a).MethodByName("Equal")
+	eq := a.MethodByName("Equal")
 
 	if !eq.IsValid() {
 		return false, false
@@ -99,7 +108,7 @@ func maybeCallEqual(a, b any) (eqResult bool, hasCmp bool) {
 		return false, false
 	}
 
-	if eq.Type().In(0) != reflect.TypeOf(b) || eq.Type().Out(0) != reflect.TypeOf(false) {
+	if eq.Type().In(0) != b.Type() || eq.Type().Out(0) != reflect.TypeOf(false) {
 		return false, false
 	}
 
@@ -112,71 +121,55 @@ func maybeCallEqual(a, b any) (eqResult bool, hasCmp bool) {
 
 func ptrsLogicallyEqual(
 	t *testing.T,
-	a interface{},
-	b interface{},
-	s ...interface{},
+	a reflect.Value,
+	b reflect.Value,
+	s ...any,
 ) bool {
 
-	aValue := reflect.ValueOf(a)
-	bValue := reflect.ValueOf(b)
-
-	if aValue.IsZero() || bValue.IsZero() {
-		return assert.Equal(t, a, b, s...)
+	if a.IsZero() || b.IsZero() {
+		return true
 	}
 
 	return LogicallyEqual(
 		t,
-		aValue.Elem().Interface(),
-		bValue.Elem().Interface(),
+		a.Elem(),
+		b.Elem(),
 		s...,
 	)
 }
 
 func structsLogicallyEqual(
 	t *testing.T,
-	a interface{},
-	b interface{},
-	s ...interface{},
+	a reflect.Value,
+	b reflect.Value,
+	s ...any,
 ) bool {
 
-	aValue := reflect.ValueOf(a)
-	bValue := reflect.ValueOf(b)
 	retVal := true
-	publicFields := 0
-	for i:=0; i<aValue.Type().NumField(); i++ {
-		if aValue.Field(i).CanInterface() {
-			fieldName := aValue.Type().Field(i).Name
-			aField := aValue.Field(i).Interface()
-			bField := bValue.Field(i).Interface()
+	for i:=0; i<a.Type().NumField(); i++ {
+		fieldName := a.Type().Field(i).Name
+		aField := a.Field(i)
+		bField := b.Field(i)
 
-			messageAndFieldName := append(s, "."+fieldName)
-			retVal = retVal && LogicallyEqual(t, aField, bField, messageAndFieldName...)
-			publicFields++
-		}
+		messageAndFieldName := append(s, "."+fieldName)
+		retVal = retVal && LogicallyEqual(t, aField, bField, messageAndFieldName...)
 	}
 
-	if publicFields > 0 {
-		return retVal
-	}
-
-	return assert.Equal(t, a, b, s...)
+	return retVal
 }
 
 func mapsLogicallyEqual(
 	t *testing.T,
-	a interface{},
-	b interface{},
-	s ...interface{},
+	a reflect.Value,
+	b reflect.Value,
+	s ...any,
 ) bool {
-
-	aValue := reflect.ValueOf(a)
-	bValue := reflect.ValueOf(b)
 
 	keysMsg := append([]interface{}{"Keys of map"}, s...)
 	ok := assert.Equal(
 		t,
-		sortedMapKeys(aValue),
-		sortedMapKeys(bValue),
+		sortedMapKeys(a),
+		sortedMapKeys(b),
 		keysMsg...,
 	)
 	if !ok {
@@ -184,13 +177,13 @@ func mapsLogicallyEqual(
 	}
 
 	retval := true
-	for _, key := range aValue.MapKeys() {
+	for _, key := range a.MapKeys() {
 		messageAndFieldName := append(s, ".['"+key.String()+"']")
 
 		retval = retval && LogicallyEqual(
 			t,
-			aValue.MapIndex(key).Interface(),
-			bValue.MapIndex(key).Interface(),
+			a.MapIndex(key),
+			b.MapIndex(key),
 			messageAndFieldName...,
 		)
 	}
@@ -200,9 +193,9 @@ func mapsLogicallyEqual(
 
 func slicesLogicallyEqual(
 	t *testing.T,
-	a interface{},
-	b interface{},
-	s ...interface{},
+	a any,
+	b any,
+	s ...any,
 ) bool {
 
 	aValue := reflect.ValueOf(a)
@@ -225,8 +218,8 @@ func slicesLogicallyEqual(
 
 		retval = retval && LogicallyEqual(
 			t,
-			aValue.Index(i).Interface(),
-			bValue.Index(i).Interface(),
+			aValue.Index(i),
+			bValue.Index(i),
 			messageAndFieldName...,
 		)
 	}

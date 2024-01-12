@@ -2,10 +2,14 @@ package assert_test
 
 import (
 	"errors"
+	"fmt"
+	"reflect"
+	"testing"
+
 	"github.com/shopspring/decimal"
 	tfyassert "github.com/stretchr/testify/assert"
+
 	"github.com/thecodedproject/gotest/assert"
-	"testing"
 )
 
 type MyCmp struct {
@@ -31,6 +35,73 @@ type MyEqual struct {
 
 func (m MyEqual) Equal(rhs MyEqual) bool {
 	return m.A == rhs.A
+}
+
+type MyStruct struct {
+	Exported string
+	unexported string
+}
+
+type MyNestedStruct struct {
+	Exported string
+	unexported string
+	ExpNest MyStruct
+	unexpNest MyStruct
+}
+
+func TestBasicTypes(t *testing.T) {
+	testLogicallyEqual(t, true, true, true)
+	testLogicallyEqual(t, int64(10), int64(10), true)
+	testLogicallyEqual(t, 1.234, 1.234, true)
+	testLogicallyEqual(t, "abc", "abc", true)
+	testLogicallyEqual(t, int64(10), int64(11), false)
+	testLogicallyEqual(t, int64(10), "hello", false)
+	testLogicallyEqual(t, "abc", false, false)
+}
+
+func TestStructs(t *testing.T) {
+
+	testLogicallyEqual(
+		t,
+		MyStruct{Exported: "a", unexported: "b"},
+		MyStruct{Exported: "a", unexported: "b"},
+		true,
+	)
+	testLogicallyEqual(
+		t,
+		MyStruct{Exported: "a", unexported: "b"},
+		MyStruct{Exported: "a", unexported: "c"},
+		false,
+	)
+
+	testLogicallyEqual(
+		t,
+		MyCmp{A: 10, Unused: 1},
+		MyCmp{A: 10, Unused: 2},
+		true,
+	)
+
+	testLogicallyEqual(
+		t,
+		MyCmp{A: 10, Unused: 1},
+		MyCmp{A: 11, Unused: 1},
+		false,
+	)
+}
+
+func testLogicallyEqual[A any, B any](t *testing.T, a A, b B, expectedResult bool) {
+	testName := fmt.Sprintf("%s_%s_%t", reflect.TypeOf(a).String(), reflect.TypeOf(b).String(), expectedResult)
+	t.Run(testName, func(t *testing.T) {
+		var fakeT testing.T
+		res := assert.LogicallyEqual(&fakeT, a, b)
+		tfyassert.Equal(t, expectedResult, res)
+	})
+
+	t.Run("pointers_" + testName, func(t *testing.T) {
+		var fakeT testing.T
+		res := assert.LogicallyEqual(&fakeT, &a, &b)
+		tfyassert.Equal(t, expectedResult, res)
+	})
 }
 
 func TestLogicallyEqual(t *testing.T) {
