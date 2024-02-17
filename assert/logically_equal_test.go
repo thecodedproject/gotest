@@ -43,10 +43,11 @@ type MyStruct struct {
 }
 
 type MyNestedStruct struct {
-	Exported string
-	unexported string
 	ExpNest MyStruct
-	unexpNest MyStruct
+}
+
+type NestedEqual struct {
+	
 }
 
 func TestBasicTypes(t *testing.T) {
@@ -61,36 +62,101 @@ func TestBasicTypes(t *testing.T) {
 
 func TestStructs(t *testing.T) {
 
-	testLogicallyEqual(
+	testLogicallyEqualWithDesc(
 		t,
+		"all fields equal",
 		MyStruct{Exported: "a", unexported: "b"},
 		MyStruct{Exported: "a", unexported: "b"},
 		true,
 	)
-	testLogicallyEqual(
+	testLogicallyEqualWithDesc(
 		t,
+		"unexported fields not equal",
 		MyStruct{Exported: "a", unexported: "b"},
 		MyStruct{Exported: "a", unexported: "c"},
 		false,
 	)
 
-	testLogicallyEqual(
+	testLogicallyEqualWithDesc(
 		t,
+		"Cmp method compares equal",
 		MyCmp{A: 10, Unused: 1},
 		MyCmp{A: 10, Unused: 2},
 		true,
 	)
 
-	testLogicallyEqual(
+	testLogicallyEqualWithDesc(
 		t,
+		"Cmp method compares not equal",
 		MyCmp{A: 10, Unused: 1},
 		MyCmp{A: 11, Unused: 1},
 		false,
 	)
+
+	testLogicallyEqualWithDesc(
+		t,
+		"Equal method compares equal",
+		MyEqual{A: 20, Unused: 1},
+		MyEqual{A: 20, Unused: 2},
+		true,
+	)
+
+	testLogicallyEqualWithDesc(
+		t,
+		"Equal method compares not equal",
+		MyEqual{A: 20, Unused: 1},
+		MyEqual{A: 21, Unused: 1},
+		false,
+	)
+
+	testLogicallyEqualWithDesc(
+		t,
+		"Uninitialised nested elements which are equal",
+		MyNestedStruct{},
+		MyNestedStruct{},
+		true,
+	)
+
+	testLogicallyEqualWithDesc(
+		t,
+		"One uninitialised nested struct compares not equal",
+		MyNestedStruct{ExpNest: MyStruct{Exported: "abc"}},
+		MyNestedStruct{},
+		false,
+	)
+
+	testLogicallyEqualWithDesc(
+		t,
+		"Nested structs equal",
+		MyNestedStruct{ExpNest: MyStruct{Exported: "abc"}},
+		MyNestedStruct{ExpNest: MyStruct{Exported: "abc"}},
+		true,
+	)
 }
 
-func testLogicallyEqual[A any, B any](t *testing.T, a A, b B, expectedResult bool) {
-	testName := fmt.Sprintf("%s_%s_%t", reflect.TypeOf(a).String(), reflect.TypeOf(b).String(), expectedResult)
+func testLogicallyEqual[A any, B any](
+	t *testing.T,
+	a A,
+	b B,
+	expectedResult bool,
+) {
+	testLogicallyEqualWithDesc(
+		t,
+		fmt.Sprintf("%t", expectedResult),
+		a,
+		b,
+		expectedResult,
+	)
+}
+
+func testLogicallyEqualWithDesc[A any, B any](
+	t *testing.T,
+	description string,
+	a A,
+	b B,
+	expectedResult bool,
+) {
+	testName := fmt.Sprintf("%s_%s_%s", reflect.TypeOf(a).String(), reflect.TypeOf(b).String(), description)
 	t.Run(testName, func(t *testing.T) {
 		var fakeT testing.T
 		res := assert.LogicallyEqual(&fakeT, a, b)

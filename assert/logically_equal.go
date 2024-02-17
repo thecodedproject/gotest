@@ -46,12 +46,10 @@ func valuesLogicallyEqual(
 ) bool {
 
 	if res, ok := maybeCallCmp(a, b); ok {
-		//message := fmt.Sprint(s...)
 		return res==0
 	}
 
 	if res, ok := maybeCallEqual(a, b); ok {
-		//message := fmt.Sprint(s...)
 		return res
 	}
 
@@ -65,7 +63,7 @@ func valuesLogicallyEqual(
 	case reflect.Slice:
 		return slicesLogicallyEqual(t, a, b, s...)
 	default:
-		return assert.Equal(t, a, b, s...)
+		return false
 	}
 }
 
@@ -113,7 +111,7 @@ func maybeCallEqual(a, b reflect.Value) (eqResult bool, hasCmp bool) {
 	}
 
 	res := eq.Call([]reflect.Value{
-		reflect.ValueOf(b),
+		b,
 	})
 
 	return res[0].Bool(), true
@@ -126,11 +124,15 @@ func ptrsLogicallyEqual(
 	s ...any,
 ) bool {
 
-	if a.IsZero() || b.IsZero() {
+	if a.IsZero() && b.IsZero() {
 		return true
 	}
 
-	return LogicallyEqual(
+	if a.IsZero() != b.IsZero() {
+		return false
+	}
+
+	return valuesLogicallyEqual(
 		t,
 		a.Elem(),
 		b.Elem(),
@@ -152,7 +154,7 @@ func structsLogicallyEqual(
 		bField := b.Field(i)
 
 		messageAndFieldName := append(s, "."+fieldName)
-		retVal = retVal && LogicallyEqual(t, aField, bField, messageAndFieldName...)
+		retVal = retVal && valuesLogicallyEqual(t, aField, bField, messageAndFieldName...)
 	}
 
 	return retVal
@@ -180,7 +182,7 @@ func mapsLogicallyEqual(
 	for _, key := range a.MapKeys() {
 		messageAndFieldName := append(s, ".['"+key.String()+"']")
 
-		retval = retval && LogicallyEqual(
+		retval = retval && valuesLogicallyEqual(
 			t,
 			a.MapIndex(key),
 			b.MapIndex(key),
@@ -193,19 +195,16 @@ func mapsLogicallyEqual(
 
 func slicesLogicallyEqual(
 	t *testing.T,
-	a any,
-	b any,
+	a reflect.Value,
+	b reflect.Value,
 	s ...any,
 ) bool {
-
-	aValue := reflect.ValueOf(a)
-	bValue := reflect.ValueOf(b)
 
 	keysMsg := append([]interface{}{"Length of slice"}, s...)
 	ok := assert.Equal(
 		t,
-		aValue.Len(),
-		bValue.Len(),
+		a.Len(),
+		b.Len(),
 		keysMsg...,
 	)
 	if !ok {
@@ -213,13 +212,13 @@ func slicesLogicallyEqual(
 	}
 
 	retval := true
-	for i:=0; i<aValue.Len(); i++ {
+	for i:=0; i<a.Len(); i++ {
 		messageAndFieldName := append(s, fmt.Sprintf(".[%d]", i))
 
-		retval = retval && LogicallyEqual(
+		retval = retval && valuesLogicallyEqual(
 			t,
-			aValue.Index(i),
-			bValue.Index(i),
+			a.Index(i),
+			b.Index(i),
 			messageAndFieldName...,
 		)
 	}
